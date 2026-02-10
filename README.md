@@ -19,6 +19,16 @@ A practical guide for hardening a vanilla Ubuntu 24.10 VPS exposed to the intern
 - A domain name pointed at your VPS IP (for SSL)
 - An SSH key pair on your local machine
 
+## Extra Docs
+
+Deeper dives and gotchas discovered along the way:
+
+| Topic | Description |
+|-------|-------------|
+| [Docker Bypasses UFW](extra-docs/docker-ufw-gotcha.md) | Why Docker-published ports ignore UFW and how to fix it |
+| [Snap vs Apt Docker](extra-docs/snap-vs-apt-docker.md) | Differences between Snap Docker and Docker CE, migration steps |
+| [UFW & Existing Connections](extra-docs/ufw-and-existing-connections.md) | Why `ufw default deny` won't kill your SSH session (and what will) |
+
 ## References
 
 - [Ubuntu Server Guide](https://ubuntu.com/server/docs)
