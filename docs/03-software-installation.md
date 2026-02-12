@@ -35,6 +35,7 @@ sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin dock
 ### Run Docker Without sudo
 
 ```bash
+sudo usermod -aG docker ubuntu
 sudo usermod -aG docker deploy
 # Log out and back in for group change to take effect
 newgrp docker

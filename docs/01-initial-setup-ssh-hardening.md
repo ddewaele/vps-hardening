@@ -32,6 +32,19 @@ sudo adduser deploy
 sudo usermod -aG sudo deploy
 ```
 
+If you want to allow passwordless sudo for convenience (optional):
+
+```bash
+echo "deploy ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/deploy
+sudo chmod 440 /etc/sudoers.d/deploy
+```
+
+Verify the syntax is valid:
+
+```bash
+sudo visudo -cf /etc/sudoers
+```
+
 Verify sudo works by switching to the new user:
 
 ```bash
@@ -124,7 +137,7 @@ The safest approach is to make changes incrementally â€” one setting at a time â
 Create the hardening drop-in config:
 
 ```bash
-sudo nano /etc/ssh/sshd_config.d/00-hardening.conf
+sudo vi /etc/ssh/sshd_config.d/00-hardening.conf
 ```
 
 Start with **only the port change**:
@@ -144,8 +157,11 @@ Add the following (the empty `ListenStream=` clears the default):
 ```ini
 [Socket]
 ListenStream=
-ListenStream=2222
+ListenStream=0.0.0.0:2222
+ListenStream=[::]:2222
 ```
+
+> **Why explicit addresses?** The base unit file may contain `BindIPv6Only=ipv6-only`, which is still inherited by the override. A bare `ListenStream=2222` combined with that setting can result in SSH only binding to IPv6, locking you out of IPv4 connections. Always specify both `0.0.0.0:PORT` (IPv4) and `[::]:PORT` (IPv6) explicitly.
 
 Restart:
 

@@ -20,6 +20,11 @@ sudo timedatectl set-timezone UTC
 ```bash
 sudo adduser deploy
 sudo usermod -aG sudo deploy
+
+# Optional: passwordless sudo
+echo "deploy ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/deploy
+sudo chmod 440 /etc/sudoers.d/deploy
+sudo visudo -cf /etc/sudoers
 ```
 
 ## 3. SSH Keys (run on your LOCAL machine)
@@ -50,7 +55,8 @@ sudo systemctl edit ssh.socket
 # Add:
 # [Socket]
 # ListenStream=
-# ListenStream=2222
+# ListenStream=0.0.0.0:2222
+# ListenStream=[::]:2222
 
 sudo systemctl daemon-reload
 sudo systemctl restart ssh.socket
@@ -76,18 +82,17 @@ sudo ufw status verbose
 
 ```bash
 sudo apt install fail2ban -y
-sudo cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local
 
-sudo tee /etc/fail2ban/jail.d/sshd.local << 'EOF'
+sudo tee /etc/fail2ban/jail.local << 'EOF'
+[DEFAULT]
+bantime  = 1h
+findtime = 10m
+maxretry = 3
+banaction = ufw
+
 [sshd]
 enabled  = true
 port     = 2222
-filter   = sshd
-logpath  = /var/log/auth.log
-maxretry = 3
-bantime  = 1h
-findtime = 10m
-banaction = ufw
 EOF
 
 sudo systemctl enable fail2ban
@@ -107,6 +112,7 @@ echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.
 
 sudo apt update
 sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
+sudo usermod -aG docker ubuntu
 sudo usermod -aG docker deploy
 newgrp docker
 docker run hello-world
@@ -165,6 +171,8 @@ server {
     location / { try_files $uri $uri/ =404; }
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 }
 NGINXEOF
 

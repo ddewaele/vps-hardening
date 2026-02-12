@@ -21,6 +21,10 @@ sudo ufw default allow outgoing
 # SSH (use your custom port from the SSH hardening step)
 sudo ufw allow 2222/tcp comment 'SSH'
 
+or if you use 49152
+sudo ufw allow 49152/tcp comment 'SSH'
+
+
 # HTTP & HTTPS (for Nginx / Let's Encrypt)
 sudo ufw allow 80/tcp comment 'HTTP'
 sudo ufw allow 443/tcp comment 'HTTPS'
@@ -76,14 +80,13 @@ sudo apt install fail2ban -y
 
 ### Configure
 
-Never edit the main config directly — create a local override:
+Never edit `jail.conf` directly — it gets overwritten on updates. Instead, create a `jail.local` with only your overrides. Fail2Ban automatically merges `jail.local` on top of `jail.conf`.
 
 ```bash
-sudo cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local
 sudo nano /etc/fail2ban/jail.local
 ```
 
-Find the `[DEFAULT]` section and set:
+Add the following (this is the entire file — keep it minimal):
 
 ```ini
 [DEFAULT]
@@ -91,19 +94,13 @@ bantime  = 1h
 findtime = 10m
 maxretry = 3
 banaction = ufw
-```
 
-Then find (or add) the `[sshd]` jail:
-
-```ini
 [sshd]
 enabled  = true
 port     = 2222
-filter   = sshd
-logpath  = /var/log/auth.log
-maxretry = 3
-bantime  = 1h
 ```
+
+> **Why not `cp jail.conf jail.local`?** Copying the full file (~700 lines) means your local copy becomes stale when fail2ban is updated. With a minimal override, you only specify what differs from the defaults, and new defaults are picked up automatically.
 
 ### Start & Enable
 
