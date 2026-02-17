@@ -169,6 +169,52 @@ preflight_checks() {
         echo "Aborted."
         exit 0
     fi
+
+    # ── Domain / Nginx prompt ────────────────────────────────────────────────
+    # Give the user a chance to configure a domain for Nginx + Let's Encrypt.
+
+    if [ "$SKIP_NGINX" != true ] && [ -z "$DOMAIN" ] && [ "$DRY_RUN" != true ]; then
+        local server_ip
+        server_ip=$(hostname -I | awk '{print $1}')
+
+        echo ""
+        log_section "Nginx & SSL Configuration (optional)"
+        echo -e "  If you have a domain name, this script can set up Nginx with"
+        echo -e "  security headers and a free Let's Encrypt SSL certificate."
+        echo ""
+        echo -e "  ${CYAN}Your server IP:${NC} $server_ip"
+        echo ""
+        echo -e "  ${YELLOW}Before entering a domain, make sure its DNS A record${NC}"
+        echo -e "  ${YELLOW}points to this server's IP address ($server_ip).${NC}"
+        echo -e "  ${YELLOW}DNS changes can take minutes to hours to propagate.${NC}"
+        echo ""
+        echo -e "  Leave empty to skip Nginx/SSL setup (you can re-run later)."
+        echo ""
+        read -rp "  Domain name (e.g. example.com): " user_domain
+        user_domain=$(echo "$user_domain" | xargs)  # trim whitespace
+
+        if [ -n "$user_domain" ]; then
+            DOMAIN="$user_domain"
+            log_ok "Domain set to: $DOMAIN"
+
+            if [ -z "$CERTBOT_EMAIL" ]; then
+                echo ""
+                echo -e "  An email is needed for Let's Encrypt certificate renewal notices."
+                echo -e "  Leave empty to skip SSL (Nginx will be HTTP-only)."
+                echo ""
+                read -rp "  Email for Let's Encrypt: " user_email
+                user_email=$(echo "$user_email" | xargs)
+                if [ -n "$user_email" ]; then
+                    CERTBOT_EMAIL="$user_email"
+                    log_ok "Certbot email set to: $CERTBOT_EMAIL"
+                else
+                    log_warn "No email provided — skipping Let's Encrypt SSL"
+                fi
+            fi
+        else
+            log_warn "No domain provided — skipping Nginx and SSL setup"
+        fi
+    fi
 }
 
 # =============================================================================
