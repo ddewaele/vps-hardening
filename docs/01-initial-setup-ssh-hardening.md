@@ -9,6 +9,14 @@ sudo apt update && sudo apt upgrade -y
 sudo apt autoremove -y
 ```
 
+If security updates are still showing after `upgrade` (e.g. kernel or dependency changes), use `dist-upgrade`:
+
+```bash
+sudo apt dist-upgrade -y
+```
+
+> `apt upgrade` skips updates that require adding/removing dependencies. `dist-upgrade` handles these, ensuring all security patches are applied. May require a reboot if a kernel update is included.
+
 Enable automatic security updates:
 
 ```bash
