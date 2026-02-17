@@ -95,6 +95,17 @@ for arg in "$@"; do
     esac
 done
 
+# ── Logging ──────────────────────────────────────────────────────────────────
+# Capture all output to a timestamped log file while still displaying on screen.
+# The log is written to /var/log/ when running as root, otherwise next to the script.
+
+LOG_DIR="/var/log"
+[ -w "$LOG_DIR" ] || LOG_DIR="$(dirname "$0")"
+LOG_FILE="${LOG_DIR}/harden-$(date +%Y%m%d-%H%M%S).log"
+
+exec > >(tee -a "$LOG_FILE") 2>&1
+echo "# harden.sh log — $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> "$LOG_FILE"
+
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 log_section() { echo -e "\n${BLUE}══════════════════════════════════════════════════════════${NC}"; echo -e "${BLUE}  $1${NC}"; echo -e "${BLUE}══════════════════════════════════════════════════════════${NC}\n"; }
@@ -769,6 +780,7 @@ print_summary() {
         fi
     fi
 
+    echo -e "  ${CYAN}Log:${NC}        $LOG_FILE"
     echo ""
     echo -e "  ${YELLOW}IMPORTANT — Test SSH access now from a NEW terminal:${NC}"
     echo -e "  ${YELLOW}  ssh -p $SSH_PORT $DEPLOY_USER@\$(hostname -I | awk '{print \$1}')${NC}"
