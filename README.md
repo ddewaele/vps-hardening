@@ -34,6 +34,40 @@ sudo ./harden.sh
 - An SSH key pair on your local machine (already on the server — that's how you logged in)
 - A domain name pointed at your VPS IP (optional — for Nginx/SSL)
 
+
+## Note on SSH Access
+
+If you don't have SSH access yet, it means there is no authorized_keys file on the server.
+In that case the script won't be able to copy your SSH keys to the new deploy user, and will refuse to run.
+
+The script will fail with this message:
+
+```
+══════════════════════════════════════════════════════════
+  01 — Create Non-Root User: deploy
+══════════════════════════════════════════════════════════
+
+  ✗ No SSH authorized_keys found for 'ubuntu' or root.
+  ✗ Cannot proceed — SSH hardening will lock you out without keys.
+  ⚠ Copy your public key to this server first, then re-run:
+  ⚠   ssh-copy-id -i ~/.ssh/id_ed25519.pub ubuntu@YOUR_SERVER_IP
+```
+
+You will need to copy your public key to the server before proceeding.
+
+```
+base ❯ ssh-copy-id -i id_rsa.pub ubuntu@192.168.0.185
+/usr/bin/ssh-copy-id: INFO: Source of key(s) to be installed: "id_rsa.pub"
+/usr/bin/ssh-copy-id: INFO: attempting to log in with the new key(s), to filter out any that are already installed
+/usr/bin/ssh-copy-id: INFO: 1 key(s) remain to be installed -- if you are prompted now it is to install the new keys
+ubuntu@192.168.0.185's password:
+
+Number of key(s) added:        1
+
+Now try logging into the machine, with: "ssh -i ./id_rsa 'ubuntu@192.168.0.185'"
+and check to make sure that only the key(s) you wanted were added.
+```
+
 ## What the Script Does
 
 The script automates everything documented in the [docs/](docs/) folder. Edit the configuration variables at the top before running:
