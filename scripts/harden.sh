@@ -828,10 +828,21 @@ print_summary() {
 
     echo -e "  ${CYAN}Log:${NC}        $LOG_FILE"
     echo ""
+    local server_ip
+    server_ip=$(hostname -I | awk '{print $1}')
+
     echo -e "  ${YELLOW}IMPORTANT — Test SSH access now from a NEW terminal:${NC}"
-    echo -e "  ${YELLOW}  ssh -p $SSH_PORT $DEPLOY_USER@\$(hostname -I | awk '{print \$1}')${NC}"
+    echo -e "  ${YELLOW}  ssh -p $SSH_PORT $DEPLOY_USER@${server_ip}${NC}"
     echo ""
     echo -e "  ${YELLOW}Do NOT close this session until you confirm the above works.${NC}"
+    echo ""
+    echo -e "  ${CYAN}Add this to your local ~/.ssh/config for easy access:${NC}"
+    echo ""
+    echo -e "  ${GREEN}Host ${server_ip}${NC}"
+    echo -e "  ${GREEN}    HostName     ${server_ip}${NC}"
+    echo -e "  ${GREEN}    User         $DEPLOY_USER${NC}"
+    echo -e "  ${GREEN}    Port         $SSH_PORT${NC}"
+    echo -e "  ${GREEN}    IdentityFile ~/.ssh/id_ed25519${NC}"
     echo ""
 }
 
