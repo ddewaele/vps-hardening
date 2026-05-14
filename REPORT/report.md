@@ -15,7 +15,8 @@
    - 3.2 [Automated Hardening Scripts & Frameworks](#32-automated-hardening-scripts--frameworks)
    - 3.3 [Intrusion Prevention & Detection](#33-intrusion-prevention--detection)
    - 3.4 [File Integrity & Rootkit Detection](#34-file-integrity--rootkit-detection)
-   - 3.5 [Mandatory Access Control](#35-mandatory-access-control)
+   - 3.5 [Malware Scanning & Runtime Detection](#35-malware-scanning--runtime-detection)
+   - 3.6 [Mandatory Access Control](#36-mandatory-access-control)
 4. [Tool-to-Repo Mapping: What Each Tool Covers vs Our Docs](#4-tool-to-repo-mapping-what-each-tool-covers-vs-our-docs)
 5. [Gap Analysis: What's Missing From This Repo](#5-gap-analysis-whats-missing-from-this-repo)
    - 5.1 [Kernel Hardening (sysctl)](#51-kernel-hardening-sysctl)
@@ -57,6 +58,7 @@ However, compared to industry benchmarks like [CIS Ubuntu Linux Benchmarks](http
 | 2FA for SSH | Medium | 15 min |
 | Docker hardening | Medium | 20 min |
 | Rootkit detection | Low-Medium | 5 min |
+| Malware scanning (ClamAV + maldet) | Medium | 10 min |
 | Log management | Medium | 15 min |
 
 Additionally, several mature open-source tools exist that can **audit** or **automate** the hardening steps already documented in this repo. The most practical are **Lynis** (auditing), **dev-sec Ansible collection** (automation), and **CrowdSec** (intrusion prevention).
@@ -393,7 +395,103 @@ sudo chkrootkit                  # Quick rootkit scan
 
 ---
 
-### 3.5 Mandatory Access Control
+### 3.5 Malware Scanning & Runtime Detection
+
+These tools focus on detecting malware files, web shells, and unexpected runtime behaviour — complementary to rootkit detectors and file integrity monitors.
+
+---
+
+#### ClamAV
+
+| | |
+|---|---|
+| **Install** | `sudo apt install clamav clamav-daemon -y` |
+| **License** | GPL |
+| **Website** | [clamav.net](https://www.clamav.net/) |
+
+**What it does:** Open-source antivirus engine. Scans files for known malware signatures. Supports on-demand and on-access (real-time) scanning. Signatures are updated via `freshclam`.
+
+**Setup:**
+```bash
+sudo apt install clamav clamav-daemon -y
+
+# The clamav-freshclam daemon updates signatures automatically.
+# To update manually, you must stop the daemon first — otherwise
+# freshclam will fail with "Failed to lock log file":
+sudo systemctl stop clamav-freshclam
+sudo freshclam
+sudo systemctl start clamav-freshclam
+
+# On-demand scan of web root (reports and removes infected files):
+ho
+```
+
+**Verdict:** Good baseline scanner, especially for scanning uploaded files and web roots. Detection coverage is lower than commercial AV but it is free, actively maintained, and low overhead. Pair with a weekly cron job targeting `/home`, `/var/www`, and `/tmp`.
+
+---
+
+#### Linux Malware Detect (LMD / maldet)
+
+| | |
+|---|---|
+| **Install** | Manual (not in apt) — `curl` from [rfxn.com](https://www.rfxn.com/projects/linux-malware-detect/) |
+| **License** | GPL |
+
+**What it does:** Designed specifically for Linux server malware — PHP backdoors, web shells, trojan scripts, and other threats common on shared hosting and VPS environments. Uses threat data sourced from network edge IDS sensors. Can use ClamAV as its scanning engine for better performance.
+
+**Setup:**
+```bash
+curl -O https://www.rfxn.com/downloads/maldetect-current.tar.gz
+tar xzf maldetect-current.tar.gz && cd maldetect-*
+sudo ./install.sh
+sudo maldet --update-sigs               # Update signatures
+sudo maldet -a /var/www                 # Scan web root
+```
+
+**Verdict:** Best choice for detecting PHP web shells and WordPress/CMS malware — something ClamAV and rkhunter miss. Ideal on servers hosting web applications. Pair with ClamAV (maldet can offload to ClamAV's engine via `use_clamdscan=1`).
+
+---
+
+#### Falco
+
+| | |
+|---|---|
+| **Install** | [falco.org install guide](https://falco.org/docs/getting-started/installation/) |
+| **License** | Apache 2.0 |
+| **Website** | [falco.org](https://falco.org/) |
+
+**What it does:** Runtime security for Linux and containers. Monitors kernel syscalls in real time and alerts on unexpected behaviour: shells spawned inside containers, privilege escalation, suspicious file reads, unexpected outbound connections. Essentially a behavioral IDS at the OS and container level.
+
+**Setup:**
+```bash
+# Install kernel headers first
+sudo apt install linux-headers-$(uname -r) -y
+
+# Add Falco repository and install
+curl -s https://falco.org/repo/falcosecurity-3672BA8F.asc | sudo apt-key add -
+echo "deb https://download.falco.org/packages/deb stable main" | sudo tee /etc/apt/sources.list.d/falcosecurity.list
+sudo apt update && sudo apt install falco -y
+sudo systemctl enable falco --now
+```
+
+**Verdict:** Excellent if you run Docker containers — catches things like `docker exec` spawning a root shell, or a web app writing to `/etc`. Heavier than the other tools and requires kernel module or eBPF support. Worth it on Docker hosts; overkill on a simple VPS.
+
+---
+
+#### Recommendation: Which to Install?
+
+| Scenario | Recommended |
+|---|---|
+| Any VPS with a web app or file uploads | **ClamAV + maldet** (weekly scan via cron) |
+| VPS hosting WordPress / PHP apps | **maldet** specifically — it catches PHP web shells ClamAV misses |
+| VPS running Docker containers | **Falco** — runtime detection for container breakouts |
+| Comprehensive coverage | **ClamAV + maldet + rkhunter** (all lightweight, no overlap) |
+
+**Bottom line:** For most single VPS deployments, **ClamAV paired with maldet** is the pragmatic choice — both are lightweight, complement each other, and require minimal maintenance. Add Falco only if running Docker workloads.
+
+---
+
+### 3.6 Mandatory Access Control
 
 #### AppArmor
 
@@ -443,6 +541,7 @@ This matrix shows which tools address which hardening areas, compared to what th
 | **auditd** | **Missing** | Audit | Apply | Audit | - | Apply |
 | **File integrity** | **Missing** | Audit | - | Audit | - | Apply |
 | **Rootkit detection** | **Missing** | Audit | - | - | - | Apply |
+| **Malware scanning** | **Missing** | - | - | - | - | - |
 | **AppArmor** | **Missing** | Audit | - | Audit | - | Apply |
 | **2FA for SSH** | **Missing** | - | - | - | - | - |
 | **Shared memory** | **Missing** | Audit | Apply | Audit | - | Apply |

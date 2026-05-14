@@ -385,6 +385,8 @@ EOF
     # ── Validate and restart ──
     log_step "Validating SSH configuration..."
     if [ "$DRY_RUN" = false ]; then
+        # Ensure privilege separation directory exists (missing on some cloud images)
+        [ -d /run/sshd ] || mkdir -p /run/sshd
         if ! sshd -t; then
             log_error "SSH config validation failed! Reverting..."
             rm -f "$sshd_config"
